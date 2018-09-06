@@ -1,0 +1,287 @@
+Organisation:
+1.public Organisation save(Organisation organisation):
+{
+KeyHolder kh = new GeneratedKeyHolder();
+		MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("ON", organisation.getOrganisationName());
+		source.addValue("OS", organisation.getStatus());
+		template.update(QueryOrganisation.INSERT_ORG, source, kh);
+		organisation.setOrganisationId(kh.getKey().intValue());
+		return organisation;
+		}
+/*Explanation:
+INput:Organisation Object as Method parameter
+mapParams:ON:gets organisation name from organisation object.
+		  OS:gets Organisation status from Organisation object.
+query:QueryOrganisation.INSERT_ORG. This contains two named parameter =:ON,:OS
+queryAction:It inserts the organisation name and organisation status to the TBL_ORGANISATION table.
+return Value:Organisation	  
+2.public List<Role> getAssignedRolesById(Organisation org):
+{
+MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("OI", org.getOrganisationId());
+		List<Role> roles = template.query(QueryOrganisation.GET_ASSIGNED_ROLE_BY_ID, source, new RoleRowMapper());
+		return roles;
+		}
+/*Explanation:
+Input:Organisation object as method parameter.
+mapParams: OI=gets organisationId from Organisation object
+query:QueryOrganisation.GET_ASSIGNED_ROLE_BY_ID .This contains a named parameter =:OI
+queryAction:It retrieves records from TBL_ROLE table by role id where role id is associated with the organisation id.
+RowMapper:Uses RoleRowMapper which contains logic to retrieve role from resuletset.
+return value:List
+3.public List<Role> getNotAssignedRolesById(Organisation org):
+{
+MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("OI", org.getOrganisationId());
+		List<Role> roles = template.query(QueryOrganisation.GET_NOT_ASSIGNED_ROLE_BY_ID, source, new RoleRowMapper());
+		return roles;
+		}
+/*Explanation:
+Input:Organisation object as method parameter
+mapParams: OI=gets OrganisationId from Organisation object.
+query:QueryOrganisation.GET_NOT_ASSIGNED_ROLE_BY_ID.This contains a named parameter=:OI
+queryAction:It retrives records from TBL_ROLE table by role id where roleId is associated with OrganisationId.
+RowMapper:Uses RoleRowMapper which contains logic to retrieve role from resuletset.
+return value:List		
+4.public Organisation assignMoreRolesById(Organisation org):
+{
+		List<Role> roles = new ArrayList<Role>(org.getRoles());
+
+		List<Map<String, Object>> batchValues = new ArrayList<>(roles.size());
+		for (Role r : roles) {
+			batchValues.add(new MapSqlParameterSource("OI", org.getOrganisationId()).addValue("RI", r.getRoleId())
+					.addValue("STATUS", r.getStatus()).getValues());
+		}
+		template.batchUpdate(QueryOrganisation.INSERT_ORG_ROLE, batchValues.toArray(new Map[roles.size()]));
+		return findById(org);
+	}
+/*Explanation:
+Input:Organisation Object as method parameter.
+mapParams:OI:gets OrganisationId from Organisation object.
+		 :RI:gets RoleId from Role Object.
+		 :STATUS:gets Status from Organisation and Role object.
+query:QueryOrganisation.INSERT_ORG_ROLE.This contains two named parameter=:RI,:OI.
+queryAction:It inserts status into Organisation_Role Table by roleid and OrganisationId.
+return value:Organisation
+/*
+5.public Organisation updateAssignedRoleStatusById(Organisation org):
+{
+
+		Map<String, Integer>[] maps = new HashMap[org.getRoles().size()];
+		int index = 0;
+		for (Role r : org.getRoles()) {
+			Map<String, Integer> dataMap = new HashMap<>();
+			dataMap.put("OI", org.getOrganisationId());
+			dataMap.put("RI", r.getRoleId());
+			dataMap.put("STATUS", r.getStatus());
+			maps[index] = dataMap;
+			index++;
+		}
+		if (maps.length > 0) {
+			int[] batchSize = template.batchUpdate(QueryOrganisation.UPDATE_STATUS_BY_ORG_ID_ROLE_ID, maps);
+		}
+		return findById(org);
+	}
+/*Explanation:
+Input:Organisation object as method parameter.
+mapParams: OI:gets OrganisationId from organistion object
+		   RI:gets RoleId from Role Object
+		   STATUS:gets Status from Role and Organisation object.
+query:QueryOrganisation.UPDATE_STATUS_BY_ORG_ID_ROLE_ID
+queryAction:It will update the status in Organisation_Role table by organisationId and by RoleId. 
+Return value:Organisation
+/		   
+6.public Organisation findById(Organisation org):
+{
+MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("OI", org.getOrganisationId());
+		org = template.queryForObject(QueryOrganisation.GET_ORG_BY_ID, source, new OrganisationRowMapper());
+		org.setRoles(new HashSet<>(getAssignedRolesById(org)));
+		return org;
+		}
+/*Explanation
+Input:Organisation object as method parameter.
+mapParams:OI:gets OrganisationId from Organisation object.
+query:QueryOrganisation.GET_ORG_BY_ID 
+queryAction:It will retrieves all the datas from the TBL_ORGANISATION table by OrganisationId
+RowMapper:it uses OrganisationRowMapper which contains logic to retrieve Organisation from Resultset.
+Return value:Organisation
+7.public Organisation updateOrganisationNameAndStausById(Organisation org):
+{
+MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("ON", org.getOrganisationName());
+		source.addValue("OS", org.getStatus());
+		source.addValue("OI", org.getOrganisationId());
+		template.update(QueryOrganisation.UPDATE_ORG, source);
+		return findById(org);
+		}
+/*Explanation
+Input:Organisation object as method parameter.
+mapParams:ON:gets Organisation name from Organisation object.
+		  :OS:gets Organisation status from Organisation object.
+		  :OI:gets OrganisationId from Organisation object.
+query:QueryOrganisation.UPDATE_ORG
+queryAction:It will update name and status in TBL_ORGANISATION table by organisationId 
+Return value:Organisation
+*/
+8.public List<Organisation> findAll():
+{
+		return template.query(QueryRole.SELECT_ALL, new OrganisationRowMapper());
+
+	}
+Input:Organisation object as method parameter.
+query:QueryRole.SELECT_ALL
+queryAction:It will retrieve all the datas of TAB_ROLE table.
+RowMapper:Uses OrganisationRowMapper which contains logic to retrieve function from Resultset.
+return value:List
+Role:
+1.public Role save(Role role):
+{
+		// TODO Auto-generated method stub
+		KeyHolder kh=new GeneratedKeyHolder();
+		MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("RN", role.getRoleName());
+		source.addValue("RS", role.getStatus());
+		template.update(QueryRole.INSERT_ROLE, source, kh);
+		role.setRoleId(kh.getKey().intValue());
+		return role;
+	}
+/*Explanation:
+Input:Role object as method parameter.
+mapParams:RN:gets roleId from Role Object
+		  :RS:gets role status From Role Object
+query:QueryRole.INSERT_ROLE
+queryAction:It will insert role name and role status into the TAB_ROLE table
+return value:Role
+*/
+2.public Role updateRoleNameAndStausById(Role role):
+{
+		// TODO Auto-generated method stub
+		MapSqlParameterSource source = new MapSqlParameterSource();
+		source.addValue("RN", role.getRoleName());
+		source.addValue("RS", role.getStatus());
+		source.addValue("RI", role.getRoleId());
+		template.update(QueryRole.UPDATE_ROLE, source);
+		return findById(role);
+	}
+*Explanation:
+Input:Role object as method parameter.
+mapParams:RN:gets Role name from Role Object
+		 :RS:gets Role status From Role Object
+		 :RI:gets Role Id from Role Object
+query:QueryRole.UPDATE_ROLE
+queryAction:It will update Role name and Role Status in TAB_ROLE table by Role Id.
+return value:Role
+*/
+3.public List getAssignedFunctionsById(Role role) {
+// TODO Auto-generated method stub
+MapSqlParameterSource source=new MapSqlParameterSource();
+source.addValue("RI", role.getRoleId());
+List functions=template.query(QueryRole.GET_ASSIGNED_FUNCTIONS_BY_ID, source, new FunctionRowMapper());
+return functions;
+}
+/* Explanation
+Input : Role Object as method parameter
+mapParams: RI= gets roleId from role object.
+query: QueryRole.GET_ASSIGNED_FUNCTIONS_BY_ID. This contains a named parameter =:RI
+queryAction: It retrieves records from TBL_FUNCTION table by function id where functionId is the functionId associated with the roleId. That is joining two tables TBL_FUNCTION and and TBL_ROLE_FUNCTION.
+RowMapper: uses FunctionRowMapper which contains logic to retrieve Function from resuletset.
+return value: List
+4.public List<Function> getNotAssignedFunctionsById(Role role):
+{
+MapSqlParameterSource source=new MapSqlParameterSource();
+		source.addValue("RI", role.getRoleId());
+		List<Function> functions=template.query(QueryRole.GET_NOT_ASSIGNED_FUNCTIONS_BY_ID, source, new FunctionRowMapper());
+		return functions;
+		}
+*Explanation:
+Input:Role object as method parameter.
+mapParams:RI= gets roleId from role Object.
+query:QueryRole.GET_NOT_ASSIGNED_FUNCTIONS_BY_ID
+queryAction:It retrieves records from TBL_FUNCTION table by function id where is functionId associated with the roleId.
+RowMapper:uses FunctionRowMapper which contains logic to retrieve Function with resuletset.
+return value: List
+*/
+5.public Role assignMoreFunctionsById(Role role):
+{
+		// TODO Auto-generated method stub
+		List<Function> functions=new ArrayList<Function>(role.getFunctions());
+		
+		List<Map<String, Object>> batchValues = new ArrayList<>(functions.size());
+		for (Function f : functions) {
+		    batchValues.add(
+		            new MapSqlParameterSource("RI", role.getRoleId())
+		                    .addValue("FI", f.getFunctionId())
+		                    .addValue("STATUS", f.getStatus())
+		                    .getValues());
+		}
+
+		template.batchUpdate(QueryRole.INSERT_ROLE_FUNCTION,
+		                           batchValues.toArray(new Map[functions.size()]));
+		return findById(role);
+	}
+*Explanation:
+Input:Role object as method parameter.
+mapParams:RI:gets Role Id from role Object
+		 :FI:gets Function id from Function Object.
+		 :STATUS:gets status from Role and Function Object.
+query:QueryRole.INSERT_ROLE_FUNCTION
+queryAction:Insert status into  TBL_ROLE_FUNCTION table with Function id and Role Id.
+return value:Role
+*/
+6.public Role updateAssignedFunctionsStatusById(Role role) :
+{
+		// TODO Auto-generated method stub
+		Map<String, Integer>[] maps = new HashMap[role.getFunctions().size()];
+		int index = 0;
+		for (Function f : role.getFunctions()) {
+			Map<String, Integer> dataMap = new HashMap<>();
+			dataMap.put("RI", role.getRoleId());
+			dataMap.put("FI", f.getFunctionId());
+			dataMap.put("STATUS", f.getStatus());
+			maps[index] = dataMap;
+			index++;
+		}
+		if (maps.length > 0) {
+			int[] batchSize = template.batchUpdate(QueryRole.UPDATE_STATUS_BY_ROLE_ID_FUNCTION_ID, maps);
+		}
+		return findById(role);
+	}
+/*Explanation:
+Input:Role object as method parameter.
+mapParams:RI:gets RoleId from role Object
+		 :FI:gets FunctionId from Function Object
+		 :STATUS:gets Status from Role and Function Object
+query:QueryRole.UPDATE_STATUS_BY_ROLE_ID_FUNCTION_ID
+queryAction:It will update the status in the TBL_ROLE_FUNCTION table with the RoleId and FunctionId.
+return value:Role
+*/
+7.public Role findById(Role role):
+{
+		// TODO Auto-generated method stub
+		MapSqlParameterSource source=new MapSqlParameterSource();
+		source.addValue("RI", role.getRoleId());
+		role=template.queryForObject(QueryRole.GET_ROLE_BY_ID, source, new RoleRowMapper());
+		role.setFunctions(new HashSet<>(getAssignedFunctionsById(role)));
+		return role;
+	}
+*Explanation:
+Input:Role object as method parameter.
+mapParams:RI:gets RoleId from role Object.
+query:QueryRole.GET_ROLE_BY_ID
+queryAction:It will retrieve all the dats fromm the TAB_ROLE table by the RoleId.
+RowMapper:it uses RoleRowMapper which contains logic to retrieve Role with resuletset.
+return value:Role
+*/
+8.public List<Role> findAll()
+{
+		// TODO Auto-generated method stub
+		return template.query(QueryFunction.SELECT_ALL, new RoleRowMapper());
+	}
+*Explanation:
+Input:Role object as method parameter.
+query:QueryFunction.SELECT_ALL
+queryAction:It will retrieve all the datas From TBL_FUNCTION table
+return value:List
+*/
